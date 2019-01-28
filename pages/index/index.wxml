@@ -1,0 +1,26 @@
+<view style='overflow:hidden'>
+<view class="bg-img"></view>
+ 
+  <view class='filter-bg'>
+    <view class='header'>
+      <!-- <image></image> -->
+    </view>
+    <view class='header-center'>
+      <image src="http://139.199.9.198/wp-content/uploads/2019/01/25a771df8db1cb1347a6428fda54564e93584b69.jpg" class='header-center-img' mode='aspectFill'></image>
+       <view class='user-info'>
+      <text class='user-name'>BIN王</text>
+      <view>
+        <text>关注 2</text>
+        <text> | </text>
+        <text>粉丝1</text>
+      </view>
+    </view>  
+    </view>
+    <view class='user-tips'>
+        <text class='user-tips-text'>95后</text>
+        <text class='user-tips-text'>Lv.8</text>
+        <text class='user-tips-text'>广州市</text>
+        <text class='user-tips-text'>双鱼座</text>
+      </view>
+  </view>
+</view>
