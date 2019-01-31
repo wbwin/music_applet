@@ -1,0 +1,53 @@
+<view style='overflow:hidden'>
+  <view class="bg-img">
+
+    <view class='filter-bg'>
+      <view class='header'>
+        <!-- <image></image> -->
+      </view>
+      <view class='header-center'>
+        <image src='{{songListDetails.coverImgUrl}}' class='header-center-img' mode='aspectFill'></image>
+        <view class='user-info'>
+          <text class='user-name'>{{songListDetails.name}}</text>
+          <view class='user-message'>
+            <image src='{{songListDetails.creator.avatarUrl}}' class='user-image'></image>
+            <text> {{songListDetails.creator.nickname}}</text>
+            <text>></text>
+          </view>
+        </view>
+      </view>
+      <!-- <view class='user-tips'>
+        <text class='user-tips-text'>95后</text>
+        <text class='user-tips-text'>Lv.8</text>
+        <text class='user-tips-text'>广州市</text>
+        <text class='user-tips-text'>双鱼座</text>
+      </view> -->
+    </view>
+  </view>
+  <view class='music-content'>
+    <view style='height:450rpx'></view>
+    <view class='music-content-main'>
+      <view class='music-bar'>
+        <text class='music-bar-text'>音乐</text>
+        <text class='music-bar-text'>动态</text>
+        <text class='music-bar-text'>关于我</text>
+      </view>
+      <!-- <view class='music-count'>
+        <text>歌单(7)</text>
+        <text>共被收藏1次</text>
+      </view> -->
+      <block wx:for="{{songListDetails.tracks}}">
+        <view class='music-main' bindtap='toAudioPlay' data-musicmsg='{{item}}'>
+          <!-- <image class='music-main-image' src='{{item.coverImgUrl}}'></image> -->
+          <text class='music-main-numb'>{{index+1}}</text>
+          <view class='music-main-introduce'>
+            <text class='music-introduce-name'>{{item.name}}</text>
+            <text class='music-introduce-count' ><block wx:for="{{item.ar}}" wx:for-item="arItem" wx:for-index="arIndex">{{arIndex>1?'/':''}}{{arItem.name}}</block> - {{item.al.name}}</text>
+          </view>
+        </view>
+      </block>
+      
+      
+    </view>
+  </view>
+</view>

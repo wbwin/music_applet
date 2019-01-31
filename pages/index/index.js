@@ -1,13 +1,18 @@
 //index.js
 //获取应用实例
 const app = getApp()
+const util=require("../../utils/util.js")
 
 Page({
   data: {
     motto: 'Hello World',
     userInfo: {},
     hasUserInfo: false,
-    canIUse: wx.canIUse('button.open-type.getUserInfo')
+    canIUse: wx.canIUse('button.open-type.getUserInfo'),
+    musicMessage:[],
+    collectMusicMessage:[],
+    userMessage:'',
+    collectCount:0,
   },
   //事件处理函数
   bindViewTap: function() {
@@ -16,6 +21,7 @@ Page({
     })
   },
   onLoad: function () {
+    let that=this
     if (app.globalData.userInfo) {
       this.setData({
         userInfo: app.globalData.userInfo,
@@ -42,6 +48,41 @@ Page({
         }
       })
     }
+    that.getUserMessage();
+    that.getUserMusicMessage();
+  },
+  getUserMessage:function(e){
+    let that=this
+    util.request('http://139.199.9.198:3000/user/detail?uid=118644089', 'get', {}, res => {
+      that.setData({
+        userMessage: res
+      })
+    }, res => { })
+  },
+  getUserMusicMessage:function(e){
+    let that = this
+    util.request('http://139.199.9.198:3000/user/playlist?uid=118644089', 'get', {}, res => {
+      for (var i in res.playlist){
+        if (res.playlist[i].description){
+          let collectMusicMessage = that.data.collectMusicMessage
+          collectMusicMessage.push(res.playlist[i])          
+          that.setData({
+            collectMusicMessage: collectMusicMessage
+          })
+        }else{
+          let musicMessage = that.data.musicMessage
+          let collectCount = 0
+          musicMessage.push(res.playlist[i])
+          for (var i in musicMessage) {
+            collectCount += musicMessage[i].subscribedCount
+          }
+          that.setData({
+            musicMessage: musicMessage,
+            collectCount: collectCount
+          })
+        }
+      }
+    }, res => { })
   },
   getUserInfo: function(e) {
     console.log(e)
@@ -50,5 +91,12 @@ Page({
       userInfo: e.detail.userInfo,
       hasUserInfo: true
     })
-  }
+  },
+  toSongListDetails:function(e){
+    let that=this
+    let id = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: '../songListDetails/songListDetails?id='+id
+    })
+  },
 })

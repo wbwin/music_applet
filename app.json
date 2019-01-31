@@ -2,8 +2,11 @@
   "pages":[
     "pages/index/index",
     "pages/user/user",
+    "pages/songListDetails/songListDetails",
+    "pages/audioPlay/audioPlay",
     "pages/logs/logs"
   ],
+  "requiredBackgroundModes":["audio"],
   "window":{
     "backgroundTextStyle":"light",
     "navigationBarBackgroundColor": "#fff",
