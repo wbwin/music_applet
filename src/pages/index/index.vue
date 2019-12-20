@@ -60,11 +60,15 @@
       </template>
     </div>
   </div>
+  <playBox></playBox>
 </div>
 </template>
 
 <script>
+import api from '../../utils/api.js'
+import playBox from '../../components/playBox.vue'
 export default {
+  components:{playBox},
   data () {
     return {
       userInfo: {},
@@ -110,7 +114,7 @@ export default {
      
     getUserMessage:function(e){
       let that=this
-      that.get('http://47.104.254.188:3000/user/detail?uid=118644089').then(function(res){
+      that.get(api.userDetail,{uid:'118644089'}).then(function(res){
         that.userMessage=res.data
       })
       // util.request('http://47.104.254.188:3000/user/detail?uid=118644089', 'get', {}, res => {
@@ -121,7 +125,7 @@ export default {
     },
     getUserMusicMessage:function(e){
       let that = this
-      that.get('http://47.104.254.188:3000/user/playlist?uid=118644089').then(function(res){
+      that.get(api.userPlaylist,{uid:'118644089'}).then(function(res){
         for (var i in res.data.playlist){
           if (res.data.playlist[i].description){
               that.collectMusicMessage.push(res.data.playlist[i])
@@ -137,6 +141,7 @@ export default {
           }
         }
       })
+      
     },
     getUserInfo: function(e) {
       console.log(e)

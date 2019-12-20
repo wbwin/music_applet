@@ -13,7 +13,7 @@
           <div class='user-message'>
             <img :src='songListDetails.creator.avatarUrl' class='user-image'/>
             <span> {{songListDetails.creator.nickname}}</span>
-            <span>></span>
+            <!-- <span>></span> -->
           </div>
         </div>
       </div>
@@ -38,7 +38,7 @@
         <span>共被收藏1次</span>
       </div> -->
       <template v-for='(item,index) in songListDetails.tracks'>
-        <div class='music-main' @click='toAudioPlay(item)'>
+        <div class='music-main' @click='toAudioPlay(item.id,index)'>
           <!-- <img class='music-main-image' :src='{{item.coverImgUrl}}'/> -->
           <span class='music-main-numb'>{{index+1}}</span>
           <div class='music-main-introduce'>
@@ -57,50 +57,107 @@
     <div class="flex_row music_detail_title border_bottom">
       <img :src="tracksDetail.al.picUrl" class="music_detail_img"/>
       <div class="flex_column music_detail_title_right">
-        <span class="music_detail_name">歌曲：BB</span>
-        <span class="music_detail_author">JJ</span>
+        <span class="music_detail_name">歌曲：{{tracksDetail.name}}</span>
+        <span class="music_detail_author"><template v-for='(arItem,arIndex) in tracksDetail.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></span>
       </div>
     </div>
-    <ul class="flex_column music_detail_ul">
-      <li class="flex_row music_detail_li">
-        <img src="/static/images/next_play.png" class="music_detail_icon"/>
-        <p class="music_detail_li_p">下一首播放</p>
-      </li>
-    </ul>
+    <scroll-view  :style="{'height': '280px'}" :scroll-y="true" >
+      <ul class="flex_column music_detail_ul">
+        <li class="flex_row music_detail_li">
+          <img src="/static/images/next_play.png" class="music_detail_icon"/>
+          <p class="music_detail_li_p">下一首播放</p>
+        </li>
+        <li class="flex_row music_detail_li">
+          <img src="/static/images/comment_icon.png" class="music_detail_icon"/>
+          <p class="music_detail_li_p">查看评论</p>
+        </li>
+        <li class="flex_row music_detail_li">
+          <img src="/static/images/sing_icon.png" class="music_detail_icon"/>
+          <p class="music_detail_li_p">歌手：<template v-for='(arItem,arIndex) in tracksDetail.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></p>
+        </li>
+        <li class="flex_row music_detail_li">
+          <img src="/static/images/album_icon.png" class="music_detail_icon"/>
+          <p class="music_detail_li_p">专辑：{{tracksDetail.al.name}}</p>
+        </li>
+        <li class="flex_row music_detail_li">
+          <img src="/static/images/del_icon.png" class="music_detail_icon"/>
+          <p class="music_detail_li_p">删除</p>
+        </li>
+      </ul>
+    </scroll-view>
   </div>
+  <playBox></playBox>
 </div>
 
 </template>
 
 <script>
-
+import api from '../../utils/api.js'
+import playBox from '../../components/playBox.vue'
+import {mapState, mapActions} from 'vuex'
 export default {
+  components:{playBox},
   data () {
     return {
      songListDetails:{creator:{}},
      animation:'',
      animationData:'',
-     showModalStatus:true,
-     tracksDetail:{},
+     showModalStatus:false,
+     tracksDetail:{al:{}},
     }
+  },
+  computed:{
+    ...mapState(['playListIndex','playListTime','playList'])
   },
   onLoad(){
     let that = this
     var options=that.globalData.appOptions.query
-    that.get('http://47.104.254.188:3000/playlist/detail?id=' + options.id).then(res=>{
+    that.get(api.playlistDetail,{id:options.id}).then(res=>{
       that.songListDetails=res.data.playlist
       that.tracksDetail=res.data.playlist.tracks[0]
     })
   },
   methods: {
-    toAudioPlay(musicMsg){
+    ...mapActions(['updatePlayListIndex','playListTimeUpdate','updatePlayList']),
+    async toAudioPlay(audioId,index,currentAudioId){
       let that=this
-      console.log(musicMsg)
-      wx.setStorageSync('musicMsg', JSON.stringify(musicMsg))
+      const playList=await that.getPlayList(audioId,index)
       
-      wx.navigateTo({
-        url: '../audioPlay/main'
-      })
+      that.updatePlayListIndex(index)
+      that.updatePlayList(playList)
+      // console.log(musicMsg)
+      // wx.setStorageSync('musicMsg', JSON.stringify(musicMsg))
+      
+      // wx.navigateTo({
+      //   url: '../audioPlay/main'
+      // })
+    },
+    async getPlayList(audioId,index,currentAudioId){
+      const that=this
+      const playList=wx.getStorageSync('playList')
+      if(playList && playList.length > 0 && audioId === playList[index].id){//判断缓存中是否有音乐列表 有则直接使用 否则重新存缓存
+         return that.subPlayList(playList, audioId)
+      }else{
+        const list=that.songListDetails.tracks
+        wx.setStorageSync('playList',list)
+        return that.subPlayList(list, audioId)
+      }
+    },
+    //更新vuex中的音乐列表 保证一定有5条数据
+    subPlayList(playList, currentAudioId) {
+      let tempArr = [...playList]
+      const count = 5 // 保持vuex中最多5条数据
+      const middle = parseInt(count / 2) // 中点的索引
+      const len = tempArr.length
+      // 如果整个原始的播放列表本来就少于5条数据，说明不需要裁剪，直接返回
+      if (len <= count) {
+        return tempArr
+      }
+      // 找到当前要播放的音频的所在位置
+      const index = tempArr.findIndex(item => item.id === currentAudioId)
+      // 截取当前音频的前后两条数据
+      tempArr = tempArr.splice(Math.max(0, Math.min(len - count, index - middle)), count)
+      return tempArr
     },
     showMusicDetail(index){
       var that=this
@@ -205,7 +262,7 @@ export default {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 999;
+  z-index: 499;
 }
 .music-content-main{
   background-color: #fff;
@@ -296,7 +353,7 @@ export default {
  z-index: 2000;
  background: #fff;
  padding-top: 10px;
- height: 200px;
+//  height: 200px;
  border-radius: 20px 20px 0 0
 }
 .up{
@@ -327,7 +384,8 @@ export default {
   padding: 15px
 }
 .music_detail_title_right{
-  margin-left: 12px
+  margin-left: 12px;
+  flex: 1;
 }
 .music_detail_name{
   font-size: 16px;
@@ -343,13 +401,16 @@ export default {
   .music_detail_li{
     padding-left: 20px;
       .music_detail_icon{
-        width: 20px;
-        height: 20px;
-        margin-left: 12px;
+        width: 22px;
+        height: 22px;
+        margin-right: 12px;
       }
       .music_detail_li_p{
         font-size: 16px;
         color: #434343;
+        padding: 16px 12px 16px 0;
+        flex: 1;
+        .text_ellipsis();
         .border_bottom();
       }
   }

@@ -2,6 +2,8 @@ import Vue from 'vue'
 import App from './App'
 import axios from 'axios'
 import qs from 'qs'
+import ApiUrl from './utils/config.js'
+import store from './store'
 // 时间戳
 const NewTimeStamp = new Date().getTime();
 
@@ -13,7 +15,7 @@ axios.defaults.adapter = function (config) {
     let data = config.method === 'get' ? config.params : qs.stringify(config.data)
     // wx小程序 发起请求相应 log 就可以看到熟悉的返回啦
     wx.request({
-      url:config.url,
+      url:ApiUrl.ApiUrl+config.url,
       method:config.method,
       data:data,
       success:(res)=>{ return resolve(res)},
@@ -59,11 +61,12 @@ function post (url,params) {
     data:params
   })
 }
+Vue.config._mpTrace = true
 Vue.config.productionTip = false
 App.mpType = 'app'
-
 const app = new Vue(App)
 app.$mount()
+Vue.prototype.$store = store
 Vue.prototype.globalData = getApp().globalData
 Vue.prototype.get=get
 export default {
