@@ -1,5 +1,6 @@
 <template>
  <div style='overflow:hidden'>
+   <scroll-view :style="{'height': '100vh'}" :scroll-y="true" >
   <div class="bg-img">
 
     <div class='filter-bg'>
@@ -52,6 +53,7 @@
       
     </div>
   </div>
+  </scroll-view>
   <div class="commodity_screen" @click="hideModal" v-if="showModalStatus"></div>
   <div :class="[showModalStatus?'up':'down']" class="commodity_attr_box" v-if="showModalStatus">
     <div class="flex_row music_detail_title border_bottom">
@@ -104,35 +106,71 @@ export default {
      animationData:'',
      showModalStatus:false,
      tracksDetail:{al:{}},
+     innerAudioContext:wx.getBackgroundAudioManager(),
     }
   },
   computed:{
-    ...mapState(['playListIndex','playListTime','playList'])
+    ...mapState(['playListIndex','playListDetail','playListTime','playList','play'])
   },
-  onLoad(){
+  onLoad(options){
     let that = this
-    var options=that.globalData.appOptions.query
     that.get(api.playlistDetail,{id:options.id}).then(res=>{
       that.songListDetails=res.data.playlist
-      that.tracksDetail=res.data.playlist.tracks[0]
     })
   },
   methods: {
-    ...mapActions(['updatePlayListIndex','playListTimeUpdate','updatePlayList']),
-    async toAudioPlay(audioId,index,currentAudioId){
+    ...mapActions(['updatePlayListIndex','updatePlayListDetail','updatePlayListTime','updatePlayList','updatePlayListMaxTime','updatePlay']),
+    async toAudioPlay(audioId,index){
       let that=this
       const playList=await that.getPlayList(audioId,index)
-      
+      const playListDetail=that.songListDetails.tracks[index]
+      //更新数据到vuex中 给playBox用
       that.updatePlayListIndex(index)
       that.updatePlayList(playList)
-      // console.log(musicMsg)
-      // wx.setStorageSync('musicMsg', JSON.stringify(musicMsg))
-      
-      // wx.navigateTo({
-      //   url: '../audioPlay/main'
-      // })
+      that.updatePlayListDetail(playListDetail)
+      //调用播放
+      that.innerAudioContext.title = playListDetail.name
+      that.innerAudioContext.epname = 2
+      let singer=''
+      for(var i in playListDetail.ar){
+        singer+=i>1?'/'+playListDetail.ar[i].name:playListDetail.ar[i].name
+      }
+      that.innerAudioContext.singer = singer
+      that.innerAudioContext.coverImgUrl =playListDetail.al.picUrl
+      that.innerAudioContext.src = 'https://music.163.com/song/media/outer/url?id='+playListDetail.id+'.mp3'
+     
+      that.innerAudioContext.onPlay(() => {
+         that.updatePlayListMaxTime(that.innerAudioContext.duration.toFixed(0))
+          that.updatePlay(true)
+        
+        // that.upDataTime()
+        
+      })
+      that.innerAudioContext.onError((res) => {
+        console.log(res.errMsg)
+        console.log(res.errCode)
+      })
     },
-    async getPlayList(audioId,index,currentAudioId){
+    upDataTime:function(){
+      let that=this
+      that.innerAudioContext.onTimeUpdate((res)=>{
+        let audioMaxTime = Number((that.innerAudioContext.duration).toFixed(0))
+        let audioValue = Number((that.innerAudioContext.currentTime).toFixed(0))
+        console.log(audioMaxTime)
+        console.log(audioValue)
+        // if(audioValue!=that.playListTime){
+        //   that.updatePlayListTime(audioValue)
+        // }
+        
+        // let audioMaxTimeShow = util.msTime(audioMaxTime)
+        // let audioValueShow = util.msTime(audioValue)
+          // that.audioMaxTime=audioMaxTime,
+          // that.audioValue=audioValue,
+          // that.audioMaxTimeShow=audioMaxTimeShow,
+          // that.audioValueShow=audioValueShow
+      })
+    },
+    async getPlayList(audioId,index){
       const that=this
       const playList=wx.getStorageSync('playList')
       if(playList && playList.length > 0 && audioId === playList[index].id){//判断缓存中是否有音乐列表 有则直接使用 否则重新存缓存
@@ -144,7 +182,7 @@ export default {
       }
     },
     //更新vuex中的音乐列表 保证一定有5条数据
-    subPlayList(playList, currentAudioId) {
+    subPlayList(playList, audioId) {
       let tempArr = [...playList]
       const count = 5 // 保持vuex中最多5条数据
       const middle = parseInt(count / 2) // 中点的索引
@@ -154,7 +192,7 @@ export default {
         return tempArr
       }
       // 找到当前要播放的音频的所在位置
-      const index = tempArr.findIndex(item => item.id === currentAudioId)
+      const index = tempArr.findIndex(item => item.id === audioId)
       // 截取当前音频的前后两条数据
       tempArr = tempArr.splice(Math.max(0, Math.min(len - count, index - middle)), count)
       return tempArr

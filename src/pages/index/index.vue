@@ -76,7 +76,7 @@ export default {
       canIUse: wx.canIUse('button.open-type.getUserInfo'),
       musicMessage:[],
       collectMusicMessage:[],
-      userMessage:'',
+      userMessage:{profile:{}},
       collectCount:0,
     }
   },
@@ -117,7 +117,7 @@ export default {
       that.get(api.userDetail,{uid:'118644089'}).then(function(res){
         that.userMessage=res.data
       })
-      // util.request('http://47.104.254.188:3000/user/detail?uid=118644089', 'get', {}, res => {
+      // util.request('http://47.104.254.188:3000/user/detail?uid=338944056', 'get', {}, res => {
       //   that.setData({
       //     userMessage: res
       //   })
@@ -125,7 +125,7 @@ export default {
     },
     getUserMusicMessage:function(e){
       let that = this
-      that.get(api.userPlaylist,{uid:'118644089'}).then(function(res){
+      that.get(api.userPlaylist,{uid:'118644089'}).then(function(res){//338944056
         for (var i in res.data.playlist){
           if (res.data.playlist[i].description){
               that.collectMusicMessage.push(res.data.playlist[i])
@@ -222,14 +222,14 @@ width: 100%;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 999;
+  z-index: 10;
 }
 .music-content-main{
   background-color: #fff;
   border-top-left-radius: 13px;
   border-top-right-radius:13px;
   font-size: 15px;
-  z-index: 999;
+  z-index: 11;
 }
 .music-bar{
   padding: 13px 0;

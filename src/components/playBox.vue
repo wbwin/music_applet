@@ -1,31 +1,90 @@
 <template>
     <div class="playBox">
-        <img src="" class="playBox_img"/>
+        <img :src="playListDetail.al.picUrl" class="playBox_img"/>
         <div class="playBox_content">
-            <p class="title"></p>
-            <p class="singer"></p>
+            <p class="title" >{{playListDetail.name}}</p>
+            <p class="singer"><template v-for='(arItem,arIndex) in playListDetail.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></p>
         </div>
-        <div class='canvasBox'>
-            <view class='bigCircle'></view>
+        <div class='canvasBox' @click="audioPause">
+            <view class='bigCircle' :style="{backgroundColor:playSec||play?'#ccc':'#585858'}"></view>
             <view class='littleCircle'></view>
-            <img src="/static/images/playBox_pause.png" class="playBox_pause"/>
+            <img :src="playSec||play?'/static/images/playBox_pause.png':'/static/images/playBox_play.png'" class="playBox_pause" />
             <canvas canvas-id="runCanvas" id="runCanvas" class='canvas'></canvas>
         </div>
         <img src="/static/images/playBox_list.png" class="playBox_list"/>
     </div>
 </template>
 <script>
+import {mapState,mapActions} from 'vuex'
 export default {
     data(){
         return{
-        percentage: '', //百分比
-        animTime: '', // 动画执行时间
+            percentage: '', //百分比
+            animTime: '', // 动画执行时间
+            playDetail:{al:{}},
+            innerAudioContext:wx.getBackgroundAudioManager(),
+            currentTime:0,
+            playSec:false,
+            canvasTimer:'',
+        }
+    },
+    computed:{
+        ...mapState(['playListIndex','playListDetail','playListTime','playList','playListMaxTime','play','plannedSpeed'])
+    },
+    watch:{
+        playListMaxTime(newPlayListMaxTime,oldPlayListMaxTime){
+            clearTimeout(this.canvasTimer)
+            this.draw('runCanvas',0,100,newPlayListMaxTime*1000);
         }
     },
     created(){
-        this.draw('runCanvas',100,10000);
+        const that=this
+        // console.log(that.playListTime)
+        
+        
+    },
+    onLoad(){
+        const that=this
+        console.log(11)
+        that.playSec=that.play
+    },
+    onShow(){
+        const that=this
+        console.log(that.play)
+        clearTimeout(that.canvasTimer)
+        if(that.play){
+            var currentTime=that.innerAudioContext.currentTime
+            var duration=that.innerAudioContext.duration
+            var plannedSpeed=((that.innerAudioContext.currentTime/that.innerAudioContext.duration)*100).toFixed(2)
+            that.draw('runCanvas',plannedSpeed,100,that.playListMaxTime*1000);
+        }
+        
     },
     methods:{
+        ...mapActions(['updatePlay','updatePlannedSpeed']),
+        //暂停音乐
+        audioPause(){
+            const that=this
+            console.log(that.innerAudioContext)
+            if(that.play){
+                that.innerAudioContext.pause()
+                that.playSec=false
+                that.updatePlay(false)
+                var currentTime=that.innerAudioContext.currentTime
+                var duration=that.innerAudioContext.duration
+                var plannedSpeed=((that.innerAudioContext.currentTime/that.innerAudioContext.duration)*100).toFixed(2)
+                that.updatePlannedSpeed(plannedSpeed)
+                clearTimeout(that.canvasTimer)
+            }else{
+                that.innerAudioContext.play()
+                that.playSec=true
+                that.draw('runCanvas',that.plannedSpeed,100,that.playListMaxTime*1000);
+                that.updatePlay(true)
+            }
+            
+            // that.currentTime=that.innerAudioContext.currentTime.toFixed(0)
+            console.log(that.currentTime)
+        },
         // 绘制圆形进度条方法
         run(c, w, h) {
         let that = this;
@@ -50,11 +109,11 @@ export default {
         return false;
         }
         that.run(start, w, h);
-        setTimeout(function () {
+        that.canvasTimer=setTimeout(function () {
         that.canvasTap(start, end, time, w, h);
         }, time);
     },
-        draw(id, percent, animTime){
+        draw(id,speedPercent,percent, animTime){//speedPercent开始百分比
         var that = this;
         const ctx2 = wx.createCanvasContext(id);
             that.ctx2=ctx2,
@@ -64,7 +123,7 @@ export default {
         wx.createSelectorQuery().select('#'+id).boundingClientRect(function (rect) { //监听canvas的宽高
             var w = parseInt(rect.width/2); //获取canvas宽的的一半
             var h = parseInt(rect.height/2); //获取canvas高的一半，
-            that.canvasTap(0, that.percentage, time, w, h)
+            that.canvasTap(speedPercent, that.percentage, time, w, h)
         }).exec();
         },
     }
@@ -84,6 +143,8 @@ export default {
         .playBox_img{
             width: 40px;
             height: 40px;
+            margin: 0 5px;
+            border-radius: 50%;
         }
         .playBox_content{
             .flex_column;
