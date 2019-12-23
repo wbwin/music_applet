@@ -28,8 +28,23 @@ const formatTime = date => {
     n = n.toString()
     return n[1] ? n : '0' + n
   }
+  const setBackgroundAudio=detail=>{
+    let innerAudioContext=wx.getBackgroundAudioManager()
+    //调用播放
+    innerAudioContext.title = detail.name
+    innerAudioContext.epname = 2
+    let singer=''
+    for(var i in detail.ar){
+      singer+=i>1?'/'+detail.ar[i].name:detail.ar[i].name
+    }
+    innerAudioContext.singer = singer
+    innerAudioContext.coverImgUrl =detail.al.picUrl
+    innerAudioContext.src = 'https://music.163.com/song/media/outer/url?id='+detail.id+'.mp3'
+    return innerAudioContext
+  }
   
   module.exports = {
     formatTime: formatTime,
-    msTime: msTime
+    msTime: msTime,
+    setBackgroundAudio:setBackgroundAudio
   }

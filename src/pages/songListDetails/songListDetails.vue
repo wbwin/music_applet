@@ -41,7 +41,14 @@
       <template v-for='(item,index) in songListDetails.tracks'>
         <div class='music-main' @click='toAudioPlay(item.id,index)'>
           <!-- <img class='music-main-image' :src='{{item.coverImgUrl}}'/> -->
-          <span class='music-main-numb'>{{index+1}}</span>
+          <div class="">
+            <template v-if="item.id==playList[playListIndex].id">
+            <img src="/static/images/playing.png" class="playing"/>
+            </template>
+            <template v-else>
+            <span class='music-main-numb'>{{index+1}}</span>
+            </template>
+          </div>
           <div class='music-main-introduce'>
             <span class='music-introduce-name'>{{item.name}}</span>
             <span class='music-introduce-count' ><template v-for='(arItem,arIndex) in item.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template> - {{item.al.name}}</span>
@@ -97,6 +104,7 @@
 import api from '../../utils/api.js'
 import playBox from '../../components/playBox.vue'
 import {mapState, mapActions} from 'vuex'
+const util = require("../../utils/util.js")
 export default {
   components:{playBox},
   data () {
@@ -110,7 +118,7 @@ export default {
     }
   },
   computed:{
-    ...mapState(['playListIndex','playListDetail','playListTime','playList','play'])
+    ...mapState(['playListIndex','playListTime','playList','play'])
   },
   onLoad(options){
     let that = this
@@ -119,61 +127,28 @@ export default {
     })
   },
   methods: {
-    ...mapActions(['updatePlayListIndex','updatePlayListDetail','updatePlayListTime','updatePlayList','updatePlayListMaxTime','updatePlay']),
+    ...mapActions(['updatePlayListIndex','updatePlayListTime','updatePlayList','updatePlayListMaxTime','updatePlay']),
     async toAudioPlay(audioId,index){
       let that=this
       const playList=await that.getPlayList(audioId,index)
+      const currentIndex = playList.findIndex(item => item.id === audioId)
       const playListDetail=that.songListDetails.tracks[index]
       //更新数据到vuex中 给playBox用
-      that.updatePlayListIndex(index)
+      that.updatePlayListIndex(currentIndex)
       that.updatePlayList(playList)
-      that.updatePlayListDetail(playListDetail)
-      //调用播放
-      that.innerAudioContext.title = playListDetail.name
-      that.innerAudioContext.epname = 2
-      let singer=''
-      for(var i in playListDetail.ar){
-        singer+=i>1?'/'+playListDetail.ar[i].name:playListDetail.ar[i].name
-      }
-      that.innerAudioContext.singer = singer
-      that.innerAudioContext.coverImgUrl =playListDetail.al.picUrl
-      that.innerAudioContext.src = 'https://music.163.com/song/media/outer/url?id='+playListDetail.id+'.mp3'
-     
-      that.innerAudioContext.onPlay(() => {
-         that.updatePlayListMaxTime(that.innerAudioContext.duration.toFixed(0))
+      let innerAudioContext=util.setBackgroundAudio(playListDetail)
+      innerAudioContext.onPlay(() => {
+         that.updatePlayListMaxTime(innerAudioContext.duration.toFixed(0))
           that.updatePlay(true)
-        
-        // that.upDataTime()
-        
       })
-      that.innerAudioContext.onError((res) => {
-        console.log(res.errMsg)
-        console.log(res.errCode)
-      })
-    },
-    upDataTime:function(){
-      let that=this
-      that.innerAudioContext.onTimeUpdate((res)=>{
-        let audioMaxTime = Number((that.innerAudioContext.duration).toFixed(0))
-        let audioValue = Number((that.innerAudioContext.currentTime).toFixed(0))
-        console.log(audioMaxTime)
-        console.log(audioValue)
-        // if(audioValue!=that.playListTime){
-        //   that.updatePlayListTime(audioValue)
-        // }
-        
-        // let audioMaxTimeShow = util.msTime(audioMaxTime)
-        // let audioValueShow = util.msTime(audioValue)
-          // that.audioMaxTime=audioMaxTime,
-          // that.audioValue=audioValue,
-          // that.audioMaxTimeShow=audioMaxTimeShow,
-          // that.audioValueShow=audioValueShow
+      innerAudioContext.onEnded(()=>{
+        that.playNextAudio()
       })
     },
     async getPlayList(audioId,index){
       const that=this
       const playList=wx.getStorageSync('playList')
-      if(playList && playList.length > 0 && audioId === playList[index].id){//判断缓存中是否有音乐列表 有则直接使用 否则重新存缓存
+      if(playList && playList.length > 0){//判断缓存中是否有音乐列表 有则直接使用 否则重新存缓存
          return that.subPlayList(playList, audioId)
       }else{
         const list=that.songListDetails.tracks
@@ -197,6 +172,33 @@ export default {
       tempArr = tempArr.splice(Math.max(0, Math.min(len - count, index - middle)), count)
       return tempArr
     },
+    //下一首
+    playNextAudio() {
+      const that=this
+      const nextIndex = that.playListIndex + 1
+      if (nextIndex < that.playList.length) {
+          // 没有超出数组长度，说明在vuex的列表中，可以直接播放
+          let innerAudioContext=util.setBackgroundAudio(that.playList[nextIndex])
+          innerAudioContext.onPlay(() => {
+            that.updatePlayListMaxTime(innerAudioContext.duration.toFixed(0))
+              that.updatePlay(true)
+          })
+          innerAudioContext.onEnded(()=>{
+            that.playNextAudio()
+          })
+          that.updatePlayListIndex(nextIndex)
+          // 当判断到已经到vuex的playList的边界了，重新从storage中拿数据补充到playList
+          if (nextIndex === that.playList.length - 1 || nextIndex === 0) {
+            // 拿到只有当前音频前后最多5条数据的列表
+            const newList = that.getPlayList(that.playList[nextIndex].id)
+            // 当前音频在这5条数据中的索引
+            const index = newList.findIndex(item => item.audioId === that.playList[nextIndex].audioId)
+            // 更新到vuex
+            that.updatePlayListIndex(index)
+            that.updatePlayList(newList)
+          }
+      }
+  },
     showMusicDetail(index){
       var that=this
       var tracks=that.songListDetails.tracks
@@ -334,6 +336,11 @@ export default {
   padding: 7px 5px;
   border-top: 1px solid #f1f1f1;
   border-bottom: 1px solid #f1f1f1;
+  .playing{
+    width: 20px;
+    height: 20px;
+
+  }
 }
 .music-main-image{
   width: 60px;

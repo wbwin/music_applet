@@ -5,8 +5,7 @@ Vue.use(Vuex)
 
 const store=new Vuex.Store({
     state:{
-        playListIndex:0,//playList当前的index
-        playListDetail:{},//playList当前在5条音乐中的index
+        playListIndex:0,//当前音乐在playList的index
         playListMaxTime:0,//音乐的播放时间
         playListTime:0,//当前音乐的播放进度
         playList:[],//音乐列表
@@ -22,9 +21,6 @@ const store=new Vuex.Store({
         playListIndexUpdate(state,index){
             console.log(state)
             state.playListIndex=index
-        },
-        playListDetailUpdate(state,detail){
-            state.playListDetail=detail
         },
         playListMaxTimeUpdate(state,time){
             console.log(time)
@@ -46,9 +42,6 @@ const store=new Vuex.Store({
     actions:{
         updatePlayListIndex(context,param){
             context.commit('playListIndexUpdate',param)
-        },
-        updatePlayListDetail(context,param){
-            context.commit('playListDetailUpdate',param)
         },
         updatePlayListMaxTime(context,param){
             context.commit('playListMaxTimeUpdate',param)
