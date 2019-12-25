@@ -19,16 +19,18 @@
                 </div>
                 <scroll-view  :style="{'height': '280px'}" :scroll-y="true" >
                 <ul class="flex_column music_detail_ul">
-                    <li class="flex_row music_detail_li" v-for="(item,index) in showPlayList">
-                        <div class="music_detail_left">
-                            <img src="/static/images/playing.png" class="playing"/>
-                            <div class="music_box" >
-                                <p class="music_name">好听-</p>
-                                <p class="author">kahkhnkahkhnajkahkhnajkahkhnajkahkhnajkahkhnajkahkhnajkahkhnajkahkhnajaj</p>
+                    <template v-for="(item,index) in showPlayList">
+                        <li class="flex_row music_detail_li">
+                            <div class="music_detail_left">
+                                <img src="/static/images/playing.png" class="playing"/>
+                                <div class="music_box" >
+                                    <p class="music_name">{{item.name}}-</p>
+                                    <p class="author"><template v-for='(arItem,arIndex) in item.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></p>
+                                </div>
                             </div>
-                        </div>
-                        <img src="/static/images/delete_play.png" class="delete_play" />
-                    </li>
+                            <img src="/static/images/delete_play.png" class="delete_play" />
+                        </li>
+                    </template>
                 </ul>
                 </scroll-view>
             </div>
@@ -48,7 +50,7 @@ export default {
             currentTime:0,
             playSec:false,
             canvasTimer:'',
-            showModalStatus:true,
+            showModalStatus:false,
             showPlayList:{},
         }
     },
@@ -343,7 +345,7 @@ export default {
                         .music_box{
                             
                             display: block;
-                            width: 50%;
+                            width: 300px;
                             .text_ellipsis;
                             .music_name{
                                 display: inline-block;
