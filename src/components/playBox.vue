@@ -1,17 +1,38 @@
 <template>
-    <div class="playBox">
-        <img :src="playList[playListIndex].al.picUrl" class="playBox_img"/>
-        <div class="playBox_content">
-            <p class="title" >{{playList[playListIndex].name}}</p>
-            <p class="singer"><template v-for='(arItem,arIndex) in playList[playListIndex].ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></p>
+    <div class="playBox_box" @click="hideModal" :style="{backgroundColor:showModalStatus?'rgba(0,0,0,0.2)':'transparent','zIndex':showModalStatus?'500':'auto'}">
+        <div class="playBox" @click.stop="">
+            <img :src="playList[playListIndex].al.picUrl" class="playBox_img"/>
+            <div class="playBox_content">
+                <p class="title" >{{playList[playListIndex].name}}</p>
+                <p class="singer"><template v-for='(arItem,arIndex) in playList[playListIndex].ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></p>
+            </div>
+            <div class='canvasBox' @click="audioPause">
+                <view class='bigCircle' :style="{backgroundColor:playSec||play?'#ccc':'#585858'}"></view>
+                <view class='littleCircle'></view>
+                <img :src="playSec||play?'/static/images/playBox_pause.png':'/static/images/playBox_play.png'" class="playBox_pause" />
+                <canvas canvas-id="runCanvas" id="runCanvas" class='canvas'></canvas>
+            </div>
+            <img src="/static/images/playBox_list.png" @click="showModal" class="playBox_list"/>
+            <div :class="[showModalStatus?'up':'down']" class="commodity_attr_box" v-if="showModalStatus">
+                <div class="flex_row music_detail_title border_bottom">
+                    播放音乐列表(99)
+                </div>
+                <scroll-view  :style="{'height': '280px'}" :scroll-y="true" >
+                <ul class="flex_column music_detail_ul">
+                    <li class="flex_row music_detail_li" v-for="(item,index) in showPlayList">
+                        <div class="music_detail_left">
+                            <img src="/static/images/playing.png" class="playing"/>
+                            <div class="music_box" >
+                                <p class="music_name">好听-</p>
+                                <p class="author">kahkhnkahkhnajkahkhnajkahkhnajkahkhnajkahkhnajkahkhnajkahkhnajkahkhnajaj</p>
+                            </div>
+                        </div>
+                        <img src="/static/images/delete_play.png" class="delete_play" />
+                    </li>
+                </ul>
+                </scroll-view>
+            </div>
         </div>
-        <div class='canvasBox' @click="audioPause">
-            <view class='bigCircle' :style="{backgroundColor:playSec||play?'#ccc':'#585858'}"></view>
-            <view class='littleCircle'></view>
-            <img :src="playSec||play?'/static/images/playBox_pause.png':'/static/images/playBox_play.png'" class="playBox_pause" />
-            <canvas canvas-id="runCanvas" id="runCanvas" class='canvas'></canvas>
-        </div>
-        <img src="/static/images/playBox_list.png" class="playBox_list"/>
     </div>
 </template>
 <script>
@@ -27,6 +48,8 @@ export default {
             currentTime:0,
             playSec:false,
             canvasTimer:'',
+            showModalStatus:true,
+            showPlayList:{},
         }
     },
     computed:{
@@ -119,7 +142,6 @@ export default {
         },
         //下一首
         playNextAudio() {
-            console.log(555)
             const that=this
             const nextIndex = that.playListIndex + 1
             if (nextIndex < that.playList.length) {
@@ -143,6 +165,18 @@ export default {
                     that.updatePlayList(newList)
                 }
             }
+        },
+        showModal() {
+            var that=this
+            const playList=wx.getStorageSync('playList')
+            that.showPlayList=playList
+            console.log(playList)
+            that.showModalStatus=true
+        },
+        hideModal(){
+            var that=this
+            console.log(12)
+            that.showModalStatus=false
         },
         // 绘制圆形进度条方法
         run(c, w, h) {
@@ -189,6 +223,12 @@ export default {
 }
 </script>
 <style lang="less">
+.playBox_box{
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100vh;
     .playBox{
         transform:translate3d(0,0,0);
         -webkit-transform:translate3d(0,0,0);
@@ -277,7 +317,59 @@ export default {
             height: 25px;
             margin: 0 10px 0 20px
         }
+        .commodity_attr_box{
+            padding-top: 0;
+            .music_detail_title{
+                width: 100%;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                color:#333;
+            }
+            .music_detail_ul{
+                .music_detail_li{
+                    padding: 15px 10px;
+                    .flex_row;
+                    .jc_flex_sb;
+                    .music_detail_left{
+                        .flex_row;
+                        .playing{
+                            width: 18px;
+                            height: 18px;
+                            margin-right: 10px;
+                        }
+                        .music_box{
+                            
+                            display: block;
+                            width: 50%;
+                            .text_ellipsis;
+                            .music_name{
+                                display: inline-block;
+                                font-size: 16px;
+                                color: #525252;
+                            }
+                            .author{
+                                display: inline-block;
+                                vertical-align: bottom;
+                                font-size: 13px;
+                                color: #a0a0a0;
+                            }
+                        }
+                    }
+                    .delete_play{
+                        width: 18px;
+                        height: 18px;
+                    }
+                }
+            }
+            
+        }
+        
     }
+}
+    
     
     
     

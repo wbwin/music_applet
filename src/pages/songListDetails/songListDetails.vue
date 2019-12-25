@@ -41,7 +41,7 @@
       <template v-for='(item,index) in songListDetails.tracks'>
         <div class='music-main' @click='toAudioPlay(item.id,index)'>
           <!-- <img class='music-main-image' :src='{{item.coverImgUrl}}'/> -->
-          <div class="">
+          <div class="music-main_state">
             <template v-if="item.id==playList[playListIndex].id">
             <img src="/static/images/playing.png" class="playing"/>
             </template>
@@ -336,11 +336,18 @@ export default {
   padding: 7px 5px;
   border-top: 1px solid #f1f1f1;
   border-bottom: 1px solid #f1f1f1;
-  .playing{
-    width: 20px;
-    height: 20px;
+  .music-main_state{
+    width: 40px;
+    .flex_row;
+    justify-content:center;
+    padding-left: 5px;
+    .playing{
+        width: 20px;
+        height: 20px;
 
+    }
   }
+  
 }
 .music-main-image{
   width: 60px;
@@ -376,45 +383,7 @@ export default {
   overflow: hidden;
   
 }
-.commodity_screen {
- width: 100%;
- height: 100%;
- position: fixed;
- top: 0;
- left: 0;
- background: #000;
- opacity: 0.2;
- overflow: hidden;
- z-index: 1000;
- color: #fff;
-}
- 
-.commodity_attr_box {
- width: 100%;
- overflow: hidden;
- position: fixed;
- bottom: 0;
- left: 0;
- z-index: 2000;
- background: #fff;
- padding-top: 10px;
-//  height: 200px;
- border-radius: 20px 20px 0 0
-}
-.up{
-  animation: up .7s;
-}
-.down{
-  animation: down 1s;
-}
-@keyframes up{
-  0% {transform: translateY(225px);}
-  100% { transform: translateY(0); }
-}
-@keyframes down{
-  0% { transform: translateY(0);}
-  100% { transform: translateY(225px);}
-}
+
 .more_img{
   width: 24px;
   height: 24px;
