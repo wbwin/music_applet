@@ -1,40 +1,41 @@
 <template>
     <div class="playBox_box" @click="hideModal" :style="{backgroundColor:showModalStatus?'rgba(0,0,0,0.2)':'transparent','zIndex':showModalStatus?'500':'auto'}">
-        <div class="playBox" @click.stop="">
+        <div class="playBox" @click.stop="goToAudioPlay()">
             <img :src="playList[playListIndex].al.picUrl" class="playBox_img"/>
             <div class="playBox_content">
                 <p class="title" >{{playList[playListIndex].name}}</p>
-                <p class="singer"><template v-for='(arItem,arIndex) in playList[playListIndex].ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></p>
+                <p class="singer"><template v-for='(arItem,arIndex) in playList[playListIndex].ar' >{{arIndex>0?'/':''}}{{arItem.name}}</template></p>
             </div>
-            <div class='canvasBox' @click="audioPause">
+            <div class='canvasBox' @click.stop="audioPause">
                 <view class='bigCircle' :style="{backgroundColor:playSec||play?'#ccc':'#585858'}"></view>
                 <view class='littleCircle'></view>
                 <img :src="playSec||play?'/static/images/playBox_pause.png':'/static/images/playBox_play.png'" class="playBox_pause" />
                 <canvas canvas-id="runCanvas" id="runCanvas" class='canvas'></canvas>
             </div>
-            <img src="/static/images/playBox_list.png" @click="showModal" class="playBox_list"/>
-            <div :class="[showModalStatus?'up':'down']" class="commodity_attr_box" v-if="showModalStatus">
+            <img src="/static/images/playBox_list.png" @click.stop="showModal" class="playBox_list"/>
+            
+        </div>
+        <div :class="[showModalStatus?'up':'down']" @click.stop="" class="commodity_attr_box" v-if="showModalStatus">
                 <div class="flex_row music_detail_title border_bottom">
                     播放音乐列表(99)
                 </div>
-                <scroll-view  :style="{'height': '280px'}" :scroll-y="true" >
+                <scroll-view  :style="{'height': '50vh'}" :scroll-y="true" >
                 <ul class="flex_column music_detail_ul">
                     <template v-for="(item,index) in showPlayList">
-                        <li class="flex_row music_detail_li">
+                        <li class="flex_row music_detail_li" @click="toAudioPlay(item.id)">
                             <div class="music_detail_left">
-                                <img src="/static/images/playing.png" class="playing"/>
+                                <img src="/static/images/playing.png" class="playing"  v-if="item.id==playList[playListIndex].id"/>
                                 <div class="music_box" >
                                     <p class="music_name">{{item.name}}-</p>
-                                    <p class="author"><template v-for='(arItem,arIndex) in item.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></p>
+                                    <p class="author"><template v-for='(arItem,arIndex) in item.ar' >{{arIndex>0?'/':''}}{{arItem.name}}</template></p>
                                 </div>
                             </div>
-                            <img src="/static/images/delete_play.png" class="delete_play" />
+                            <img src="/static/images/delete_play.png" @click.stop="deletList(item.id,index)" class="delete_play" />
                         </li>
                     </template>
                 </ul>
                 </scroll-view>
             </div>
-        </div>
     </div>
 </template>
 <script>
@@ -91,7 +92,58 @@ export default {
     },
     methods:{
         ...mapActions(['updatePlay','updatePlannedSpeed','updatePlayListMaxTime','updatePlayListIndex','updatePlayList']),
-        //暂停音乐
+        //音乐详情
+        goToAudioPlay(){
+            wx.navigateTo({
+                url: '../audioPlay/main'
+            })
+        },
+        //删除播放列表中的音乐
+        async deletList(audioId,index){
+            const that=this
+            const showPlayList=that.showPlayList
+            showPlayList.splice(index,1)
+            wx.setStorageSync('playList',showPlayList)
+            that.showPlayList=showPlayList
+            var playId=that.playList[that.playListIndex].id
+            for(var i in that.playList){
+                if(audioId==that.playList[i].id){
+                    if(audioId==playId){
+                        var playAudioId=that.playListIndex==that.playList.length-1?showPlayList[0].id:that.playList[that.playListIndex+1].id
+                        that.toAudioPlay(playAudioId)
+                    }else{
+                        var playList=await that.getPlayList(that.playList[that.playListIndex].id)
+                        console.log(playList)
+                        var currentIndex = playList.findIndex(item => item.id === that.playList[that.playListIndex].id)
+                        //更新数据到vuex中 给playBox用
+                        that.updatePlayListIndex(currentIndex)
+                        that.updatePlayList(playList)
+                    }
+                    
+                    console.log(that.playList)
+                }
+            }
+            
+        },
+        //点击切换音乐
+         async toAudioPlay(audioId){
+            let that=this
+            const playList=await that.getPlayList(audioId)
+            const currentIndex = playList.findIndex(item => item.id === audioId)
+            const playListDetail=playList[currentIndex]
+            //更新数据到vuex中 给playBox用
+            that.updatePlayListIndex(currentIndex)
+            that.updatePlayList(playList)
+            let innerAudioContext=util.setBackgroundAudio(playListDetail)
+            innerAudioContext.onPlay(() => {
+                that.updatePlayListMaxTime(innerAudioContext.duration.toFixed(0))
+                that.updatePlay(true)
+            })
+            innerAudioContext.onEnded(()=>{
+                that.playNextAudio()
+            })
+        },
+        //暂停开始音乐
         audioPause(){
             const that=this
             console.log(that.innerAudioContext)
@@ -125,9 +177,9 @@ export default {
                 // return that.subPlayList(list, audioId)
                 console.log('缓存没数据')
             }
-            },
-            //更新vuex中的音乐列表 保证一定有5条数据
-            subPlayList(playList, audioId) {
+        },
+        //更新vuex中的音乐列表 保证一定有5条数据
+        subPlayList(playList, audioId) {
             let tempArr = [...playList]
             const count = 5 // 保持vuex中最多5条数据
             const middle = parseInt(count / 2) // 中点的索引
@@ -143,25 +195,25 @@ export default {
             return tempArr
         },
         //下一首
-        playNextAudio() {
+        async playNextAudio() {
             const that=this
             const nextIndex = that.playListIndex + 1
             if (nextIndex < that.playList.length) {
-                let innerAudioContext=util.setBackgroundAudio(playListDetail)
+                let innerAudioContext=util.setBackgroundAudio(that.playList[nextIndex])
                 innerAudioContext.onPlay(() => {
                     that.updatePlayListMaxTime(innerAudioContext.duration.toFixed(0))
                     that.updatePlay(true)
                 })
-                innerAudioContext.onEnded(()=>{
+                innerAudioContext.onEnded(()=>{ 
                     that.playNextAudio()
                 })
                 that.updatePlayListIndex(nextIndex)
                 // 当判断到已经到vuex的playList的边界了，重新从storage中拿数据补充到playList
                 if (nextIndex === that.playList.length - 1 || nextIndex === 0) {
                     // 拿到只有当前音频前后最多5条数据的列表
-                    const newList = that.getPlayList(that.playList[nextIndex].id)
+                    const newList =await that.getPlayList(that.playList[nextIndex].id)
                     // 当前音频在这5条数据中的索引
-                    const index = newList.findIndex(item => item.audioId === that.playList[nextIndex].audioId)
+                    const index = newList.findIndex(item => item.id === that.playList[nextIndex].id)
                     // 更新到vuex
                     that.updatePlayListIndex(index)
                     that.updatePlayList(newList)
@@ -257,7 +309,9 @@ export default {
             margin:0 10px 0 5px;
             .title{
                 font-size: 15px;
-                color: #3e3e3e
+                color: #3e3e3e;
+                .text_ellipsis;
+                width: 60vw;
             }
             .singer{
                 font-size: 12px;
@@ -319,7 +373,10 @@ export default {
             height: 25px;
             margin: 0 10px 0 20px
         }
-        .commodity_attr_box{
+       
+        
+    }
+     .commodity_attr_box{
             padding-top: 0;
             .music_detail_title{
                 width: 100%;
@@ -368,8 +425,6 @@ export default {
             }
             
         }
-        
-    }
 }
     
     

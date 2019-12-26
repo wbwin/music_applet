@@ -51,7 +51,7 @@
           </div>
           <div class='music-main-introduce'>
             <span class='music-introduce-name'>{{item.name}}</span>
-            <span class='music-introduce-count' ><template v-for='(arItem,arIndex) in item.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template> - {{item.al.name}}</span>
+            <span class='music-introduce-count' ><template v-for='(arItem,arIndex) in item.ar' >{{arIndex>0?'/':''}}{{arItem.name}}</template> - {{item.al.name}}</span>
           </div>
           <img src="/static/images/more.png" class="more_img" @click.stop="showMusicDetail(index)"/>
         </div>
@@ -67,7 +67,7 @@
       <img :src="tracksDetail.al.picUrl" class="music_detail_img"/>
       <div class="flex_column music_detail_title_right">
         <span class="music_detail_name">歌曲：{{tracksDetail.name}}</span>
-        <span class="music_detail_author"><template v-for='(arItem,arIndex) in tracksDetail.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></span>
+        <span class="music_detail_author"><template v-for='(arItem,arIndex) in tracksDetail.ar' >{{arIndex>0?'/':''}}{{arItem.name}}</template></span>
       </div>
     </div>
     <scroll-view  :style="{'height': '280px'}" :scroll-y="true" >
@@ -82,7 +82,7 @@
         </li>
         <li class="flex_row music_detail_li">
           <img src="/static/images/sing_icon.png" class="music_detail_icon"/>
-          <p class="music_detail_li_p">歌手：<template v-for='(arItem,arIndex) in tracksDetail.ar' >{{arIndex>1?'/':''}}{{arItem.name}}</template></p>
+          <p class="music_detail_li_p">歌手：<template v-for='(arItem,arIndex) in tracksDetail.ar' >{{arIndex>0?'/':''}}{{arItem.name}}</template></p>
         </li>
         <li class="flex_row music_detail_li">
           <img src="/static/images/album_icon.png" class="music_detail_icon"/>
@@ -147,13 +147,11 @@ export default {
     },
     async getPlayList(audioId,index){
       const that=this
-      const playList=wx.getStorageSync('playList')
+      const list=that.songListDetails.tracks
+        wx.setStorageSync('playList',list)
+      const playList=list
       if(playList && playList.length > 0){//判断缓存中是否有音乐列表 有则直接使用 否则重新存缓存
          return that.subPlayList(playList, audioId)
-      }else{
-        const list=that.songListDetails.tracks
-        wx.setStorageSync('playList',list)
-        return that.subPlayList(list, audioId)
       }
     },
     //更新vuex中的音乐列表 保证一定有5条数据
@@ -173,7 +171,7 @@ export default {
       return tempArr
     },
     //下一首
-    playNextAudio() {
+    async playNextAudio() {
       const that=this
       const nextIndex = that.playListIndex + 1
       if (nextIndex < that.playList.length) {
@@ -190,9 +188,9 @@ export default {
           // 当判断到已经到vuex的playList的边界了，重新从storage中拿数据补充到playList
           if (nextIndex === that.playList.length - 1 || nextIndex === 0) {
             // 拿到只有当前音频前后最多5条数据的列表
-            const newList = that.getPlayList(that.playList[nextIndex].id)
+            const newList =await that.getPlayList(that.playList[nextIndex].id)
             // 当前音频在这5条数据中的索引
-            const index = newList.findIndex(item => item.audioId === that.playList[nextIndex].audioId)
+            const index = newList.findIndex(item => item.id === that.playList[nextIndex].id)
             // 更新到vuex
             that.updatePlayListIndex(index)
             that.updatePlayList(newList)
