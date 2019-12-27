@@ -14,9 +14,19 @@
       </div>
 
     </div>
-    <div class='main-musicMsg-img'>
+    <div class='main-musicMsg-img' @click="showOrHideLyric()" :style="{'opacity':lyricShow?0:1}">
       <div class='img-bg'></div>
       <img class='music-img' :style="{animationPlayState:play?'running':'paused'}"  :src='playList[playListIndex].al.picUrl'/>
+    </div>
+    <div class="lyric_box" @click="showOrHideLyric()" :style="{'opacity':lyricShow?1:0}">
+      <div class="lyric_text_box" :style="{'top': lyricTextTop+ 'px'}" id="ele">
+        <template v-for="(item,index) in lyricList"> 
+          <div :key="index" class="lyric_text" :style="{'color': index === lyricListIndex ? '#fff' : '#8e9ba1'}" :id="'ele'+index">
+            <p>{{item[1]}}</p>
+            <p>{{item[2]}}</p>
+          </div>
+        </template>
+      </div>
     </div>
     <div class="music_view">
       <div class='music-sliderView'>
@@ -51,46 +61,152 @@ export default {
       audioValueShow:'00:00',
       singer:'',
       innerAudioContext:wx.getBackgroundAudioManager(),
-      musicMsg:{al:{},ar:[]}
+      musicMsg:{al:{},ar:[]},
+      lyricList:[],
+      lyricListIndex:-1,
+      upDataTimer:'',
+      lyricTextTop:220,
+      lyricShow:false,
     }
   },
   computed:{
     ...mapState(['playListIndex','playListTime','playList','play','plannedSpeed'])
   },
+  watch:{
+    lyricListIndex(){
+      const that=this
+      var lyricListIndex=that.lyricListIndex
+      let query = wx.createSelectorQuery();
+     query.select('#ele'+lyricListIndex).boundingClientRect()
+     query.exec((res) =>{
+       that.lyricTextTop-=res[0].height+10
+　　　})
+    }
+  },
   onLoad(){
       let that=this
       that.audio();
+      that.lyric();
+      
+  },
+  mounted(){
+    
+     
   },
   methods: {
     ...mapActions(['updatePlayListIndex','updatePlayListTime','updatePlayList','updatePlayListMaxTime','updatePlay','updatePlannedSpeed']),
-    audio: function (){
+    //点击显示隐藏歌词
+    showOrHideLyric(){
+      const that=this
+      that.lyricShow=!that.lyricShow
+    },
+    //歌词
+    lyric(){
       let that = this
       that.get(api.lyric,{id:that.playList[that.playListIndex].id}).then(function(res){
         var lines=res.data.lrc.lyric
-        console.log(lines)
-        let pattern = /\[\d{2}:\d{2}.\d{2}\]/g;
-        while (!pattern.test(lines[0])) {
+        
+         lines = lines.split('\n');
+        var result=[]
+        let pattern = /\[\d{2}:\d{2}.\d{3}\]/g;
+        let pattern2 = /\[\d{2}:\d{2}.\d{2}\]/g;
+        while (!pattern.test(lines[0])&&!pattern2.test(lines[0])) {
           lines = lines.slice(1);
         }
-        console.log(lines.length)
+        
+        lines[lines.length - 1].length === 0 && lines.pop();
+        for (var i in lines) {
+          let index = lines[i].indexOf(']');
+          let time = lines[i].substring(0, index + 1);
+          let value = lines[i].substring(index + 1);
+          let timeString = time.substring(1, time.length - 2);
+          let timeArr = timeString.split(':');
+          result.push([parseInt(timeArr[0], 10) * 60 + parseFloat(timeArr[1]), value]);
+        }
+        result.sort(function(a, b) {
+          return a[0] - b[0];
+        });
+        console.log(result)
+
+        //中文
+        var chLines=res.data.tlyric.lyric
+        chLines=chLines.split('\n');
+        let chResult=[]
+        while (!pattern.test(chLines[0])&&!pattern2.test(chLines[0])) {
+          chLines = chLines.slice(1);
+        }
+        chLines[chLines.length - 1].length === 0 && chLines.pop();
+        for (var i in chLines) {
+          let index = chLines[i].indexOf(']');
+          let time = chLines[i].substring(0, index + 1);
+          let value = chLines[i].substring(index + 1);
+          let timeString = time.substring(1, time.length - 2);
+          let timeArr = timeString.split(':');
+          chResult.push([parseInt(timeArr[0], 10) * 60 + parseFloat(timeArr[1]), value]);
+        }
+        chResult.sort(function(a, b) {
+          return a[0] - b[0];
+        });
+        for(let i in chResult){
+          for(let j in result){
+            if(chResult[i][0]==result[j][0]){
+              result[j][2]=chResult[i][1]
+              break;
+            }
+          }
+        }
+        console.log(result)
+        that.lyricList=result
       })
-      console.log(that.innerAudioContext)
+    },
+    audio: function (){
+      let that = this
       let musicMsg = that.playList[that.playListIndex]
       that.upDataTime()
       that.musicMsg=musicMsg
     },
     upDataTime:function(){
       let that=this
-      that.innerAudioContext.onTimeUpdate((res)=>{
+      that.upDataTimer=setInterval(()=>{
+        let lyricListIndex = 0;
+        let lyricListI=that.lyricListIndex>0?that.lyricListIndex:0
+        let currentTime=that.innerAudioContext.currentTime
+        let lyricList=that.lyricList
         let audioMaxTime = Number((that.innerAudioContext.duration * 1000).toFixed(0))
         let audioValue = Number((that.innerAudioContext.currentTime * 1000).toFixed(0))
+        
         let audioMaxTimeShow = util.msTime(audioMaxTime)
         let audioValueShow = util.msTime(audioValue)
-          that.audioMaxTime=audioMaxTime,
-          that.audioValue=audioValue,
-          that.audioMaxTimeShow=audioMaxTimeShow,
-          that.audioValueShow=audioValueShow
-      })
+        that.audioMaxTime=audioMaxTime
+        that.audioValue=audioValue
+        that.audioMaxTimeShow=audioMaxTimeShow
+        that.audioValueShow=audioValueShow
+        for(let i = lyricListI; i < this.lyricList.length; i++){
+            if(currentTime>lyricList[i][0]-1){
+              // console.log(audioValue)
+              lyricListIndex=i
+              console.log(lyricListIndex)
+            }
+          }
+          that.lyricListIndex=lyricListIndex
+      },1000)
+      
+      // that.innerAudioContext.onTimeUpdate((res)=>{
+      //   let lyricListIndex = 0;
+      //   let currentTime=that.innerAudioContext.currentTime
+      //   let lyricList=that.lyricList
+      //   let audioMaxTime = Number((that.innerAudioContext.duration * 1000).toFixed(0))
+      //   let audioValue = Number((that.innerAudioContext.currentTime * 1000).toFixed(0))
+      //   let audioMaxTimeShow = util.msTime(audioMaxTime)
+      //   let audioValueShow = util.msTime(audioValue)
+      //     that.audioMaxTime=audioMaxTime
+      //     that.audioValue=audioValue
+      //     that.audioMaxTimeShow=audioMaxTimeShow
+      //     that.audioValueShow=audioValueShow
+          
+          
+          
+      // })
     },
     //暂停开始音乐
         audioPause(){
@@ -103,9 +219,11 @@ export default {
                 var duration=that.innerAudioContext.duration
                 var plannedSpeed=((that.innerAudioContext.currentTime/that.innerAudioContext.duration)*100).toFixed(2)
                 that.updatePlannedSpeed(plannedSpeed)
+                clearInterval(that.upDataTimer)
             }else{
                 that.innerAudioContext.play()
                 that.updatePlay(true)
+                that.upDataTime()
             }
             
         },
@@ -250,6 +368,7 @@ export default {
   justify-content: center;
   margin-top: 100px;
   position: relative;
+  transition: opacity 0.5s linear 0.5s;
 }
 .img-bg{
   width: 250px;
@@ -317,6 +436,33 @@ export default {
   }
   .next_right{
     transform: rotate(180deg);
+  }
+}
+.lyric_box{
+  position: absolute;
+  top: 100px;
+  bottom: 100px;
+  left: 10px;
+  right: 10px;
+  overflow: hidden;
+  transition: opacity 0.5s linear 0.5s;
+  .lyric_text_box{
+    position: absolute;
+    left: 0;
+    right: 0;
+    transition: -webkit-transform 0.3s ease-out;
+    transform-origin: 0 0 0;
+    transition: top 0.5s linear 0.5s;
+    .lyric_text{
+      // height: 42px;
+      font-size: 16px;
+      color: #fff;
+      text-align: center;
+      margin: 10px 0;
+      p{
+
+      }
+    }
   }
 }
 
